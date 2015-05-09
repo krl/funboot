@@ -1,0 +1,22 @@
+{
+  "name": "funboot",
+  "version": "1.0.5",
+  "description": "Boot js from ipfs for fun!",
+  "main": "funboot.js",
+  "dependencies": {
+    "ipfs-api": "1.1.2",
+    "browserify": "10.1.3",
+    "lodash": "3.8.0",
+    "kew": "0.5.0"
+  },
+  "bin": {
+    "funboot": "./funboot.js"
+  },
+  "devDependencies": {
+    "pre-commit": "^1.0.6"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/krl/funboot"
+  }
+}
