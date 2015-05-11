@@ -1,1 +1,3 @@
-console.log($env)
+(function (env) {
+  env.log(env)
+})

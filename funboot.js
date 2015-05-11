@@ -21,6 +21,12 @@ try {
   })
 } catch (e) {}
 
+var register = function (name, hash) {
+  fs.appendFile(process.env['HOME'] + '/.funboot-names',
+                name + ' ' + hash + '\n', function () {})
+  log("registered: " + name + ' ' + hash)
+}
+
 // user .funboot-names overrides everything else
 
 try {
@@ -32,17 +38,6 @@ try {
     }
   })
 } catch (e) {}
-
-function evaluate (env, js) {
-  var padded = '(function ($env) {' + js + ' ;return(module)})'
-  // lexical scope for evaluated js
-  var module = {}
-  var fun = eval(padded)
-
-  fun(env)
-
-  return module.exports
-}
 
 function slurp (stream) {
   var def = Q.defer()
@@ -66,41 +61,73 @@ function log (msg) {
   console.log(msg)
 }
 
-function boot (env, toboot) {
-  var def = Q.defer()
-  var resolved
-  if (!toboot) toboot = 'help'
-  if (names[toboot]) {
-    resolved = names[toboot]
-  } else {
-    resolved = toboot
-  }
+function get_args () {
+  return process.argv.slice(2)
+  if (typeof window !== 'undefined') {
 
-  ipfs.cat(resolved, function (err, res) {
-    if (err) {
-      if (resolved.length < 46) {
-        // no multihash
-        console.log('Error: ' + resolved + ' is not a known name')
+  }
+}
+
+function boot (env, pluraltoboot, cb) {
+  if (typeof pluraltoboot === "string") {
+    return boot(env, [pluraltoboot], cb)
+  }
+  if (!pluraltoboot) pluraltoboot = ['help']
+
+  var promises = _.map(pluraltoboot, function (toboot) {
+    var def = Q.defer()
+    var resolved
+    if (names[toboot]) {
+      resolved = names[toboot]
+    } else {
+      resolved = toboot
+    }
+    ipfs.cat(resolved, function (err, res) {
+      if (err) {
+        if (resolved.length < 46) {
+          // no multihash
+          console.log('Error: ' + resolved + ' is not a known name')
+          process.exit(1)
+        }
+        console.log('ipfs error: ' + JSON.stringify(err))
         process.exit(1)
       }
-      console.log('ipfs error: ' + JSON.stringify(err))
-      process.exit(1)
-    }
-    slurp(res).then(function (data) {
-      var result = evaluate(env, data)
-      def.resolve(result)
+      slurp(res).then(function (data) {
+        var result
+        try {
+          var fun = eval(data.trim())
+          var module
+          result = fun.call(module, env)
+          if (typeof result === 'undefined') {
+            // browserify through UMD
+            result = root.module
+          }
+        } catch (e) {
+          error(e)
+        }
+        def.resolve(result)
+      })
     })
+    return def.promise
   })
-  return def.promise
+
+  Q.all(promises).then(function (evaluated) {
+    if (cb) {
+      cb.apply(undefined, evaluated)
+    }
+  })
 }
+
+var args = get_args()
 
 boot({
   ipfs: ipfs,
   boot: boot,
   brow: brow,
+  register: register,
   fs: fs,
   names: names,
   error: error,
   log: log,
-  args: process.argv.slice(3)
-}, process.argv[2])
+  args: args.slice(1)
+}, args[0])

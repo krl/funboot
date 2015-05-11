@@ -13,8 +13,14 @@
     "funboot": "./funboot.js"
   },
   "devDependencies": {
-    "pre-commit": "^1.0.6"
+    "pre-commit": "^1.0.6",
+    "standard": "^3.3.2"
   },
+  "scripts": {
+    "lint": "git diff --name-only --cached --relative | egrep .jsx?$ | xargs --no-run-if-empty standard"
+  },
+  "pre-commit": [
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/krl/funboot"
